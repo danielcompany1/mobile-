@@ -1,0 +1,21 @@
+{
+  "name": "dueday-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.12.1",
+  "scripts": {
+    "dev:mobile": "pnpm --filter @dueday/shared build && pnpm --filter @dueday/mobile start",
+    "dev:web": "pnpm --filter @dueday/shared build && pnpm --filter @dueday/web dev",
+    "dev:api": "pnpm --filter @dueday/shared build && pnpm --filter @dueday/api dev",
+    "typecheck": "pnpm --filter @dueday/shared build && pnpm -r typecheck",
+    "test": "node --experimental-strip-types --test packages/shared/src/*.test.ts",
+    "test:db": "supabase test db"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "expo": "^58.0.25"
+  }
+}
