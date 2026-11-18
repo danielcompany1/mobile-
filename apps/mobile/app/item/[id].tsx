@@ -11,6 +11,14 @@ import { showAlert } from '../../lib/dialogs';
 
 const CALENDAR_EXPORT_KEY = 'dueday-calendar-export-enabled';
 
+/** 1500 → "1d 1h", 90 → "1h 30m" (previously rendered fractional days such as "1.0416666666666667d"). */
+function formatOffset(minutes: number) {
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+  return [days ? `${days}d` : '', hours ? `${hours}h` : '', mins ? `${mins}m` : ''].filter(Boolean).join(' ') || '0m';
+}
+
 export default function ItemDetail() {
   useColorScheme();
   const { id, occurrence } = useLocalSearchParams<{ id: string; occurrence?: string }>();
@@ -94,14 +102,14 @@ export default function ItemDetail() {
   return <Screen><View style={{ gap: 16 }}><Pressable accessibilityRole="button" onPress={() => router.back()} style={{ paddingVertical: 4 }}><Text style={ui.action}>‹  Back</Text></Pressable>
     <View style={ui.row}><Eyebrow>{CATEGORY_LABELS[item.category].toUpperCase()}</Eyebrow><Text style={{ color: item.status === 'completed' ? colors.green : item.priority === 'high' ? colors.red : colors.muted, fontWeight: '800', fontSize: 12, textTransform: 'uppercase' }}>{item.status === 'completed' ? 'Completed' : `${item.priority} priority`}</Text></View>
     <Heading subtitle={formatDeadline(item.due_on, item.due_time, item.timezone)}>{item.title}</Heading>
-    <Card><Text style={{ color: colors.ink, fontWeight: '800', fontSize: 16 }}>Deadline details</Text><Text style={ui.body}>{item.all_day ? 'All day' : `At ${item.due_time} · ${item.timezone}`}</Text><Text style={ui.small}>Reminders: {item.reminders.length ? item.reminders.map((n) => n >= 1440 ? `${n / 1440}d` : `${n}m`).join(', ') : 'None'}</Text>{item.recurrence_rule ? <Text style={ui.small}>Repeats weekly for 16 weeks</Text> : null}{item.notes ? <Text style={ui.body}>{item.notes}</Text> : <Text style={ui.small}>No notes added.</Text>}</Card>
+    <Card><Text style={{ color: colors.ink, fontWeight: '800', fontSize: 16 }}>Deadline details</Text><Text style={ui.body}>{item.all_day ? 'All day' : `At ${item.due_time} · ${item.timezone}`}</Text><Text style={ui.small}>Reminders: {item.reminders.length ? item.reminders.map(formatOffset).join(', ') : 'None'}</Text>{item.recurrence_rule ? <Text style={ui.small}>Repeats weekly for 16 weeks</Text> : null}{item.notes ? <Text style={ui.body}>{item.notes}</Text> : <Text style={ui.small}>No notes added.</Text>}</Card>
     <Card><View style={ui.row}><Text style={{ color: colors.ink, fontWeight: '800', fontSize: 16 }}>Checklist</Text><Text style={ui.small}>{steps.filter((step) => step.is_complete).length}/{steps.length} done</Text></View>
       {steps.map((step) => <Pressable key={step.id} accessibilityRole="checkbox" accessibilityState={{ checked: step.is_complete }} onPress={() => void toggleStep(step)} style={[ui.row, { justifyContent: 'flex-start', paddingVertical: 7 }]}><Text style={{ fontSize: 19, color: colors.green }}>{step.is_complete ? '☑' : '□'}</Text><Text style={{ color: step.is_complete ? colors.muted : colors.ink, flex: 1, textDecorationLine: step.is_complete ? 'line-through' : 'none' }}>{step.title}</Text></Pressable>)}
       <View style={ui.row}><TextInput accessibilityLabel="New checklist step" value={newStep} onChangeText={setNewStep} placeholder="Add a step" placeholderTextColor={colors.muted} onSubmitEditing={() => void addStep()} returnKeyType="done" style={{ flex: 1, minHeight: 48, borderWidth: 1, borderColor: colors.line, borderRadius: 13, paddingHorizontal: 12, color: colors.ink, backgroundColor: colors.card }} /><Button title="Add" variant="secondary" onPress={() => void addStep()} /></View>
     </Card>
     {error ? <Text accessibilityRole="alert" style={{ color: colors.red }}>{error}</Text> : null}
-    {!item.recurrence_rule ? <Button title={item.status === 'completed' ? 'Reopen deadline' : busy ? 'Saving…' : 'Mark complete'} variant="secondary" onPress={() => void markComplete()} disabled={busy} /> : <Text style={ui.small}>This is one class in a 16-week series. Edit the series in Planner.</Text>}
+    {!item.recurrence_rule ? <Button title={item.status === 'completed' ? 'Reopen deadline' : busy ? 'Saving…' : 'Mark complete'} variant="secondary" onPress={() => void markComplete()} disabled={busy} /> : <Text style={ui.small}>This is one class in a 16-week series. Use Edit to change the whole series.</Text>}
     {Platform.OS === 'web' ? <Text style={ui.small}>Device calendar export is available in the iOS and Android apps. Your in-app planner remains available here.</Text> : calendarExportEnabled ? <Button title="Add to device calendar" variant="secondary" onPress={() => void addToDeviceCalendar()} /> : <Button title="Enable calendar export in Settings" variant="secondary" onPress={() => router.push('/(tabs)/settings')} />}
-    <View style={ui.row}><Button title="Edit" onPress={() => router.push({ pathname: '/item/new', params: { id: item.id } })} /><Button title="Delete" variant="danger" onPress={remove} /></View>
+    <View style={ui.row}><View style={{ flex: 1 }}><Button title="Edit" onPress={() => router.push({ pathname: '/item/new', params: { id: item.id } })} /></View><View style={{ flex: 1 }}><Button title="Delete" variant="danger" onPress={remove} /></View></View>
   </View></Screen>;
 }

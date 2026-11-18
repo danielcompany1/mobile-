@@ -33,7 +33,7 @@ export default function NewPlannerItem() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) { setLoading(false); return; }
     if (!itemId) {
       if (session) supabase.from('profiles').select('timezone').eq('id', session.user.id).maybeSingle().then(({ data }) => { if (data?.timezone) { setTimezone(data.timezone); setDueOn(localDateAt(new Date(), data.timezone)); } });
       return;
