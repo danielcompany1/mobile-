@@ -10,7 +10,15 @@ import { supabase } from './supabase';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PREFIX = 'dueday-local-reminders:';
+/** Returned by requestAndRegisterPush only when the device was registered successfully. */
+export const PUSH_READY_MESSAGE = 'Notifications are ready on this device.';
 Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }) });
+
+function resolveProjectId(): string | undefined {
+  const fromEnv = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
+  if (fromEnv && !fromEnv.includes('replace_with')) return fromEnv;
+  return Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+}
 
 export async function requestAndRegisterPush() {
   try {
@@ -22,9 +30,7 @@ export async function requestAndRegisterPush() {
     let status = existing;
     if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync());
     if (status !== 'granted') return 'Notifications are off. You can still see reminders inside DueDay.';
-    const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID && !process.env.EXPO_PUBLIC_EAS_PROJECT_ID.includes('replace_with')
-      ? process.env.EXPO_PUBLIC_EAS_PROJECT_ID
-      : Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+    const projectId = resolveProjectId();
     if (!projectId) return 'Push setup needs an Expo project ID. Local reminders can still work on this device.';
     const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
     const { data } = await supabase.auth.getSession();
@@ -34,7 +40,7 @@ export async function requestAndRegisterPush() {
       body: JSON.stringify({ token, platform: Platform.OS === 'ios' ? 'ios' : 'android' }),
     });
     if (!response.ok) return 'Push permission is on, but we could not register this device yet. Try again from Settings.';
-    return 'Notifications are ready on this device.';
+    return PUSH_READY_MESSAGE;
   } catch { return 'Push setup could not finish. You can still see reminders inside DueDay; try again from Settings.'; }
 }
 
@@ -42,9 +48,7 @@ export async function unregisterPushToken() {
   try {
     if (Platform.OS === 'web' || (Platform.OS === 'android' && isRunningInExpoGo())) return;
     if (!supabase || !API_URL) return;
-    const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID && !process.env.EXPO_PUBLIC_EAS_PROJECT_ID.includes('replace_with')
-      ? process.env.EXPO_PUBLIC_EAS_PROJECT_ID
-      : Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+    const projectId = resolveProjectId();
     if (!projectId) return;
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') return;
@@ -93,6 +97,13 @@ export async function scheduleLocalReminders(item: PlannerItem) {
     scheduled.push(id);
   }
   await AsyncStorage.setItem(`${PREFIX}${item.id}`, JSON.stringify(scheduled));
+}
+
+/** Re-plan device reminders for every open item, e.g. after reminder or quiet-hour settings change. */
+export async function rescheduleOpenItems() {
+  if (Platform.OS === 'web' || !supabase) return;
+  const { data } = await supabase.from('planner_items').select('*').eq('status', 'open');
+  for (const item of (data ?? []) as PlannerItem[]) await scheduleLocalReminders(item);
 }
 
 export async function cancelAllLocalReminders() {

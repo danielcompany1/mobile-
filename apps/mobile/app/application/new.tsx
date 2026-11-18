@@ -20,7 +20,8 @@ export default function ApplicationForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
-    if (!id || !supabase) return;
+    if (!id) return;
+    if (!supabase) { setLoading(false); return; }
     supabase.from('applications').select('*').eq('id', id).single().then(({ data, error: queryError }) => {
       if (queryError || !data) setError('This application could not be loaded.');
       else { const app = data as Application; setOrganization(app.organization); setOpportunity(app.opportunity_name); setDeadline(app.deadline ?? ''); setStatus(app.status); setNotes(app.notes ?? ''); }

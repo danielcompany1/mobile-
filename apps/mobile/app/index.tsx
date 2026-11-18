@@ -13,9 +13,14 @@ export default function Index() {
     if (loading) return;
     if (!session) { setDestination('/auth/sign-in'); return; }
     if (!supabase) { setDestination('/auth/sign-in'); return; }
-    supabase.from('profiles').select('full_name').eq('id', session.user.id).maybeSingle().then(({ data }) => {
-      setDestination(data?.full_name ? '/(tabs)/today' : '/onboarding');
-    });
+    let active = true;
+    // Only send people to onboarding when we know the profile is incomplete. If the lookup
+    // fails (e.g. offline), open the app so cached planner data stays reachable.
+    supabase.from('profiles').select('full_name').eq('id', session.user.id).maybeSingle().then(
+      ({ data, error }) => { if (active) setDestination(error || data?.full_name ? '/(tabs)/today' : '/onboarding'); },
+      () => { if (active) setDestination('/(tabs)/today'); },
+    );
+    return () => { active = false; };
   }, [session, loading]);
   if (!destination) return <Loading />;
   return <Redirect href={destination as never} />;
