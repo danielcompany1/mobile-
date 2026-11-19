@@ -12,6 +12,7 @@ const schema = z.object({
   RESEND_API_KEY: optional,
   RESEND_FROM_EMAIL: optional,
   RESEND_REPLY_TO: optional,
+  RESEND_VERIFIED_FROM_EMAIL: optional,
   SMTP_HOST: optional,
   SMTP_PORT: z.coerce.number().default(465),
   SMTP_USER: optional,

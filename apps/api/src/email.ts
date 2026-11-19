@@ -4,12 +4,14 @@ import { env } from './env.js';
 import { renderSignInEmail } from './otp-email.js';
 
 /**
- * Two delivery options:
- *  - SMTP (e.g. Gmail + app password): used when SMTP_HOST/SMTP_USER/SMTP_PASS are set.
- *    Delivers to any recipient without owning a domain (Gmail allows ~500/day).
- *  - Resend: used otherwise. Needs a verified domain to send to anyone but the account owner.
+ * Delivery, in priority order:
+ *  1. Resend with a verified domain: RESEND_API_KEY + RESEND_VERIFIED_FROM_EMAIL.
+ *  2. SMTP (e.g. Gmail + app password): SMTP_HOST/SMTP_USER/SMTP_PASS.
+ *     Delivers to any recipient without owning a domain (Gmail allows ~500/day).
+ *  3. Resend with RESEND_FROM_EMAIL (the testing sender only reaches the account owner).
  */
-const smtp = env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS
+const useVerifiedResend = Boolean(env.RESEND_API_KEY && env.RESEND_VERIFIED_FROM_EMAIL);
+const smtp = !useVerifiedResend && env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS
   ? nodemailer.createTransport({
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
@@ -18,10 +20,12 @@ const smtp = env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS
     })
   : null;
 const resend = !smtp && env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
-const fromAddress = smtp ? (env.SMTP_FROM ?? `DueDay <${env.SMTP_USER}>`) : env.RESEND_FROM_EMAIL;
+const fromAddress = smtp
+  ? (env.SMTP_FROM ?? `DueDay <${env.SMTP_USER}>`)
+  : (env.RESEND_VERIFIED_FROM_EMAIL ?? env.RESEND_FROM_EMAIL);
 
 export const isEmailConfigured = Boolean((smtp || resend) && fromAddress);
-export const emailProvider = smtp ? 'smtp' : resend ? 'resend' : 'none';
+export const emailProvider = smtp ? 'smtp (Gmail)' : useVerifiedResend ? 'resend (verified domain)' : resend ? 'resend (test sender: owner inbox only)' : 'none';
 
 interface Message { to: string; subject: string; html?: string; text: string; headers?: Record<string, string> }
 
