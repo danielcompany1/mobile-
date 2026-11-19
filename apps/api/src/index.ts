@@ -9,6 +9,7 @@ import { requireUser } from './auth.js';
 import { admin } from './supabase.js';
 import { dispatchNotifications } from './push.js';
 import { registerAuthRoutes } from './otp.js';
+import { emailProvider } from './email.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -71,4 +72,4 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
   return res.status(500).json({ error: 'Something went wrong. Please try again.' });
 });
 
-app.listen(env.PORT, () => console.info(`DueDay API listening on ${env.PORT}`));
+app.listen(env.PORT, () => console.info(`DueDay API listening on ${env.PORT} (sign-in email via ${emailProvider})`));
