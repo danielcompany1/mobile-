@@ -70,3 +70,25 @@ export class OtpRequestError extends Error {
     this.kind = failure.kind;
   }
 }
+
+/**
+ * Asks the DueDay API to email a sign-in code. Resolves with the code length on success.
+ * Throws an object shaped like an Auth error ({ code, status, name }) so callers can pass it
+ * straight to getOtpRequestFailure.
+ */
+export async function requestEmailCodeFromApi(apiUrl: string, email: string): Promise<{ codeLength: number }> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl.replace(/\/$/, '')}/v1/auth/email-code`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: normalizeEmail(email) }),
+    });
+  } catch {
+    throw { name: 'TypeError', status: 0, code: null };
+  }
+  const body = await response.json().catch(() => ({})) as { codeLength?: unknown; code?: unknown };
+  if (!response.ok) throw { name: 'ApiError', status: response.status, code: typeof body.code === 'string' ? body.code : null };
+  const codeLength = typeof body.codeLength === 'number' && body.codeLength >= 6 && body.codeLength <= 10 ? body.codeLength : EMAIL_OTP_LENGTH;
+  return { codeLength };
+}

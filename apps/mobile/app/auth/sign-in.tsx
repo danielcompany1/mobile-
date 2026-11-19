@@ -16,8 +16,8 @@ export default function SignIn() {
     if (!isValidEmail(normalized)) { setError('Enter a valid email address.'); return; }
     setError(''); setBusy(true);
     try {
-      await sendCode(normalized);
-      router.push({ pathname: '/auth/code', params: { email: normalized } });
+      const codeLength = await sendCode(normalized);
+      router.push({ pathname: '/auth/code', params: { email: normalized, length: String(codeLength) } });
     } catch (e) { setError(e instanceof Error ? e.message : 'We could not send a code. Try again.'); }
     finally { setBusy(false); }
   }
@@ -27,7 +27,7 @@ export default function SignIn() {
       <Card><Field label="Email address" value={email} onChangeText={setEmail} placeholder="you@school.edu" keyboardType="email-address" autoCapitalize="none" autoComplete="email" returnKeyType="send" onSubmitEditing={submit} />
         {error ? <Text accessibilityRole="alert" style={{ color: colors.red }}>{error}</Text> : null}
         {!configured ? <Text style={ui.small}>Sign-in is ready once Supabase is connected. Set the mobile environment values in the setup guide.</Text> : null}
-        <Button title={busy ? 'Sending code…' : 'Continue with email'} onPress={submit} disabled={busy} />
+        <Button title={busy ? 'Sending code…' : 'Continue with email  →'} onPress={submit} disabled={busy} />
         <Text style={[ui.small, { textAlign: 'center' }]}>We’ll email you a one-time code. No password needed.</Text>
       </Card>
     </View>

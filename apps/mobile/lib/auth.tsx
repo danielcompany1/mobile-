@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { getOtpRequestFailure, OtpRequestError } from '@dueday/shared';
+import { EMAIL_OTP_LENGTH, getOtpRequestFailure, OtpRequestError, requestEmailCodeFromApi } from '@dueday/shared';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 import { supabase } from './supabase';
 
-interface AuthValue { session: Session | null; loading: boolean; configured: boolean; sendCode(email: string): Promise<void>; verifyCode(email: string, code: string): Promise<void>; signOut(): Promise<void> }
+interface AuthValue { session: Session | null; loading: boolean; configured: boolean; sendCode(email: string): Promise<number>; verifyCode(email: string, code: string): Promise<void>; signOut(): Promise<void> }
 const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: React.PropsWithChildren) {
@@ -19,9 +21,19 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     session, loading, configured: Boolean(supabase),
     async sendCode(email) {
       if (!supabase) throw new Error('Add your Supabase URL and publishable key to apps/mobile/.env.local.');
+      const normalized = email.trim().toLowerCase();
       try {
-        const { error } = await supabase.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true } });
+        if (API_URL) {
+          try { return (await requestEmailCodeFromApi(API_URL, normalized)).codeLength; }
+          catch (reason) {
+            // API unreachable (e.g. localhost on a physical phone): fall back to Supabase's mailer.
+            if (!(reason && typeof reason === 'object' && (reason as { status?: number }).status === 0)) throw reason;
+            if (__DEV__) console.warn('DueDay API unreachable at', API_URL, '- use your computer LAN IP in EXPO_PUBLIC_API_URL');
+          }
+        }
+        const { error } = await supabase.auth.signInWithOtp({ email: normalized, options: { shouldCreateUser: true } });
         if (error) throw error;
+        return EMAIL_OTP_LENGTH;
       } catch (error) {
         const failure = getOtpRequestFailure(error);
         if (__DEV__) console.warn('otp_request_failed', failure.diagnostic);

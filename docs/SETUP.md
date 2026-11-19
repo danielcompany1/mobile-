@@ -24,6 +24,17 @@ The reset applies `supabase/migrations`; `supabase test db` runs the pgTAP owner
 
 In Supabase Auth, set the site URL to the deployed web origin. Add the development web callback and the deployed `/auth/callback` URL to the allowed redirect URLs. Enable email sign-up. The clients show the same generic sent message for new and returning sign-in addresses.
 
+## How sign-in codes are delivered (current setup)
+
+The web and mobile apps call `POST /v1/auth/email-code` on the DueDay API. The API asks Supabase Auth (service role) to mint a one-time code for the address, then emails it through Resend using the branded template in `apps/api/src/otp-email.ts`. The apps verify the code with `supabase.auth.verifyOtp` as before, so sessions and RLS are unchanged. This works without Supabase custom SMTP or dashboard template edits.
+
+- The API must be running for sign-in (`dev:api`). If the API is unreachable, the apps fall back to Supabase's own mailer.
+- Rate limits: 1 code per address every 45 s, 6 per hour, 15 requests per IP per 15 minutes.
+- **Resend sender domain:** until you verify a domain in Resend (Resend → Domains), use `RESEND_FROM_EMAIL="DueDay <onboarding@resend.dev>"`. That sender only delivers to the email that owns the Resend account. After verifying e.g. `dueday.app`, set `RESEND_FROM_EMAIL="DueDay <hello@dueday.app>"` and every user receives codes. Gmail/Outlook addresses cannot be used as the sender.
+- On a physical phone, set `EXPO_PUBLIC_API_URL` to your computer's LAN IP (for example `http://192.168.1.20:4000`).
+
+The sections below describe the alternative of having Supabase send the email itself via custom SMTP.
+
 ## Configure sign-in emails as codes
 
 `signInWithOtp` can send either a link or a code depending on the Supabase email template. DueDay expects an eight-digit code. If an email arrives with a sign-in link, update the templates in the Supabase project used by the app.
