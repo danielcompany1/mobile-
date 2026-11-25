@@ -4,20 +4,24 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import { env } from './env.js';
+import { env, webOrigins } from './env.js';
 import { requireUser } from './auth.js';
 import { admin } from './supabase.js';
 import { dispatchNotifications } from './push.js';
+import { registerAuthRoutes } from './otp.js';
+import { emailProvider } from './email.js';
 
 const app = express();
 app.disable('x-powered-by');
 app.use(helmet());
-app.use(cors({ origin: env.WEB_ORIGIN, methods: ['GET', 'POST', 'PUT', 'DELETE'], allowedHeaders: ['authorization', 'content-type'] }));
+app.use(cors({ origin: webOrigins, methods: ['GET', 'POST', 'PUT', 'DELETE'], allowedHeaders: ['authorization', 'content-type'] }));
 app.use(express.json({ limit: '32kb' }));
 app.use(rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false }));
 const sensitiveLimit = rateLimit({ windowMs: 60 * 60_000, limit: 5, standardHeaders: 'draft-8', legacyHeaders: false });
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'dueday-api' }));
+
+registerAuthRoutes(app);
 
 app.put('/v1/push-devices', requireUser, async (req, res) => {
   const input = z.object({
@@ -68,4 +72,4 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
   return res.status(500).json({ error: 'Something went wrong. Please try again.' });
 });
 
-app.listen(env.PORT, () => console.info(`DueDay API listening on ${env.PORT}`));
+app.listen(env.PORT, () => console.info(`DueDay API listening on ${env.PORT} (sign-in email via ${emailProvider})`));
