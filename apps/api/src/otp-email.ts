@@ -29,7 +29,7 @@ export function renderSignInEmail(code: string, isNewUser: boolean) {
     '',
     'If you didn’t request this, you can safely ignore this email.',
     '',
-    `— ${PRODUCT_NAME} · ${PRODUCT_TAGLINE}`,
+    `${PRODUCT_NAME} · ${PRODUCT_TAGLINE}`,
   ].join('\n');
 
   const html = `<!doctype html>

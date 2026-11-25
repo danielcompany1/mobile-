@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Button, Card, Eyebrow, Screen, colors, ui } from '../../components/ui';
+import { Button, Icon, IconButton, Screen, colors, tap } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { canResendCode, EMAIL_OTP_LENGTH, GENERIC_CODE_SENT_MESSAGE, isValidEmailOtp, INVALID_OR_EXPIRED_CODE_MESSAGE, OtpRequestError, OTP_REQUEST_FAILURE_MESSAGES } from '@dueday/shared';
 
 const rawCooldown = Number(process.env.EXPO_PUBLIC_AUTH_RESEND_COOLDOWN_SECONDS ?? 60);
 const cooldown = Number.isFinite(rawCooldown) ? Math.min(600, Math.max(30, Math.floor(rawCooldown))) : 60;
 
-function CodeBoxes({ value, length, onChange, disabled }: { value: string; length: number; onChange(v: string): void; disabled: boolean }) {
+function CodeBoxes({ value, length, onChange, disabled, error }: { value: string; length: number; onChange(v: string): void; disabled: boolean; error: boolean }) {
   useColorScheme();
   const input = useRef<React.ComponentRef<typeof TextInput>>(null);
   const [focused, setFocused] = useState(true);
@@ -17,8 +17,8 @@ function CodeBoxes({ value, length, onChange, disabled }: { value: string; lengt
     {Array.from({ length }, (_, i) => {
       const active = focused && i === Math.min(value.length, length - 1);
       const filled = Boolean(value[i]);
-      return <View key={i} style={{ flex: 1, maxWidth: 44, height: 54, marginRight: i === half - 1 ? 8 : 0, borderRadius: 12, borderWidth: active ? 2 : 1.5, borderColor: active ? colors.accent : filled ? colors.accent + '88' : colors.line, backgroundColor: filled ? colors.soft : colors.card, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.ink, fontSize: 22, fontWeight: '800' }}>{value[i] ?? ''}</Text>
+      return <View key={i} style={{ flex: 1, maxWidth: 46, height: 58, marginRight: i === half - 1 ? 10 : 0, borderRadius: 14, borderWidth: active ? 2 : 1, borderColor: error ? colors.red : active ? colors.accent : filled ? colors.accent + '66' : colors.line, backgroundColor: filled ? colors.soft : colors.card, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: colors.ink, fontSize: 24, fontWeight: '700' }}>{value[i] ?? ''}</Text>
       </View>;
     })}
     <TextInput
@@ -58,7 +58,7 @@ export default function VerifyCode() {
     if (!isValidEmailOtp(value, codeLength)) { setError(`Enter the ${codeLength}-digit code from your email.`); return; }
     if (busy) return;
     setBusy(true); setError(''); setNotice('');
-    try { await verifyCode(email, value); router.replace('/'); }
+    try { await verifyCode(email, value); tap('success'); router.replace('/'); }
     catch (reason) {
       setCode('');
       setError(reason instanceof Error && reason.message === 'AUTH_NETWORK_ERROR' ? 'We could not reach the sign-in service. Check your connection and try again.' : INVALID_OR_EXPIRED_CODE_MESSAGE);
@@ -77,26 +77,25 @@ export default function VerifyCode() {
     finally { setBusy(false); }
   }
 
-  return <Screen><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'center', gap: 24, minHeight: 560 }}>
+  return <Screen><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, gap: 28, minHeight: 560 }}>
+    <IconButton icon="chevron-back" accessibilityLabel="Use a different email" onPress={() => router.replace('/auth/sign-in')} style={{ alignSelf: 'flex-start' }} />
     <View>
-      <View style={{ width: 54, height: 54, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 22 }}><Text style={{ fontSize: 24, color: colors.lime }}>✉</Text></View>
-      <Eyebrow>Check your inbox</Eyebrow>
-      <Text accessibilityRole="header" style={{ color: colors.ink, fontWeight: '800', fontSize: 34, letterSpacing: -1.2 }}>Enter your code</Text>
-      <Text style={[ui.body, { color: colors.muted, marginTop: 10 }]}>We sent a {codeLength}-digit code to <Text style={{ color: colors.ink, fontWeight: '700' }}>{email}</Text>. It can take a minute — check spam too.</Text>
+      <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: colors.soft, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}><Icon name="mail-open-outline" size={28} color={colors.accent} /></View>
+      <Text accessibilityRole="header" style={{ color: colors.ink, fontWeight: '800', fontSize: 32, letterSpacing: -1 }}>Check your email</Text>
+      <Text style={{ color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: 10 }}>Enter the {codeLength}-digit code we sent to{'\n'}<Text style={{ color: colors.ink, fontWeight: '600' }}>{email}</Text></Text>
     </View>
-    <Card style={{ gap: 16, paddingVertical: 22 }}>
-      <CodeBoxes value={code} length={codeLength} disabled={busy} onChange={(next) => { setCode(next); setError(''); if (next.length === codeLength) void submit(next); }} />
-      {error ? <Text accessibilityRole="alert" style={{ color: colors.red, textAlign: 'center' }}>{error}</Text> : null}
-      {notice ? <Text accessibilityRole="text" style={{ color: colors.accent, textAlign: 'center' }}>{notice}</Text> : null}
-      {busy ? <View style={{ alignItems: 'center' }}><ActivityIndicator color={colors.accent} /></View> : null}
+    <View style={{ gap: 18 }}>
+      <CodeBoxes value={code} length={codeLength} disabled={busy} error={Boolean(error)} onChange={(next) => { setCode(next); setError(''); if (next.length === codeLength) void submit(next); }} />
+      {error ? <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon name="alert-circle" size={16} color={colors.red} /><Text accessibilityRole="alert" style={{ color: colors.red, textAlign: 'center', fontSize: 14 }}>{error}</Text></View> : null}
+      {notice ? <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon name="checkmark-circle" size={16} color={colors.green} /><Text style={{ color: colors.green, textAlign: 'center', fontSize: 14 }}>{notice}</Text></View> : null}
+      {busy ? <ActivityIndicator color={colors.accent} /> : null}
       <Button title={busy ? 'Checking…' : 'Verify and continue'} onPress={() => void submit()} disabled={busy || code.length !== codeLength} />
-      <View style={ui.row}>
-        <Text style={ui.small}>Didn’t get it?</Text>
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy || !canResendCode(remaining) }} disabled={busy || !canResendCode(remaining)} onPress={() => void resend()} style={{ padding: 8 }}>
-          <Text style={{ color: remaining || busy ? colors.muted : colors.accent, fontWeight: '700' }}>{remaining ? `Resend in ${remaining}s` : 'Send a new code'}</Text>
+      <View style={{ alignItems: 'center', gap: 4 }}>
+        <Text style={{ color: colors.muted, fontSize: 14 }}>Didn’t get it? Check your spam folder, or</Text>
+        <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy || !canResendCode(remaining) }} disabled={busy || !canResendCode(remaining)} onPress={() => { tap(); void resend(); }} style={{ padding: 8 }}>
+          <Text style={{ color: remaining || busy ? colors.faint : colors.accent, fontWeight: '700', fontSize: 15 }}>{remaining ? `Resend code in ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}` : 'Send a new code'}</Text>
         </Pressable>
       </View>
-    </Card>
-    <Text accessibilityRole="button" onPress={() => router.replace('/auth/sign-in')} style={{ color: colors.accent, fontWeight: '700', textAlign: 'center', padding: 10 }}>Use a different email</Text>
+    </View>
   </KeyboardAvoidingView></Screen>;
 }
