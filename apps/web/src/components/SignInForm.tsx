@@ -81,7 +81,7 @@ export function SignInForm() {
     <div className="authIcon" aria-hidden="true">{sent ? '✉' : '✓'}</div>
     <div className="eyebrow">{sent ? 'CHECK YOUR INBOX' : 'A CALMER WAY TO STAY ON TOP'}</div>
     <h1>{sent ? 'Enter your code' : 'Your deadlines, in one calm place.'}</h1>
-    <p>{sent ? <>We sent a {codeLength}-digit code to <b className="emailChip">{email}</b>. It may take a minute to arrive — check spam too.</> : 'Save assignments, exams, fees, and applications, then give each one a next step.'}</p>
+    <p>{sent ? <>We sent a {codeLength}-digit code to <b className="emailChip">{email}</b>. It may take a minute to arrive, so check spam too.</> : 'Save assignments, exams, fees, and applications, then give each one a next step.'}</p>
     {!sent
       ? <form onSubmit={(event) => { event.preventDefault(); void send(); }}>
           <label>Email address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@school.edu" autoComplete="email" autoFocus required /></label>

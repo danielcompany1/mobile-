@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Text, View , useColorScheme} from 'react-native';
+import { KeyboardAvoidingView, Platform, Text, View, useColorScheme } from 'react-native';
 import { router } from 'expo-router';
-import { Button, Card, Eyebrow, Field, Screen, colors, ui } from '../../components/ui';
-import { isValidEmail, normalizeEmail, PRODUCT_NAME, PRODUCT_TAGLINE } from '@dueday/shared';
+import { Button, Field, Icon, Screen, colors, shadow, type IconName } from '../../components/ui';
+import { isValidEmail, normalizeEmail, PRODUCT_NAME } from '@dueday/shared';
 import { useAuth } from '../../lib/auth';
+
+const perks: Array<{ icon: IconName; text: string }> = [
+  { icon: 'calendar-outline', text: 'Every assignment, exam, and fee in one calendar' },
+  { icon: 'notifications-outline', text: 'Reminders before things are due' },
+  { icon: 'briefcase-outline', text: 'Track scholarships, internships, and jobs' },
+];
 
 export default function SignIn() {
   useColorScheme();
@@ -21,15 +27,31 @@ export default function SignIn() {
     } catch (e) { setError(e instanceof Error ? e.message : 'We could not send a code. Try again.'); }
     finally { setBusy(false); }
   }
-  return <Screen><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'center' }}>
-    <View style={{ gap: 28 }}>
-      <View><View style={{ width: 54, height: 54, borderRadius: 18, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center', marginBottom: 22 }}><Text style={{ fontSize: 27 }}>✓</Text></View><Eyebrow>Welcome to {PRODUCT_NAME}</Eyebrow><Text accessibilityRole="header" style={{ color: colors.ink, fontWeight: '800', fontSize: 37, letterSpacing: -1.4, lineHeight: 43 }}>Your deadlines,{ '\n' }in one calm place.</Text><Text style={[ui.body, { color: colors.muted, marginTop: 13 }]}>{PRODUCT_TAGLINE} Save assignments, applications, exams, and the small steps that get them done.</Text></View>
-      <Card><Field label="Email address" value={email} onChangeText={setEmail} placeholder="you@school.edu" keyboardType="email-address" autoCapitalize="none" autoComplete="email" returnKeyType="send" onSubmitEditing={submit} />
-        {error ? <Text accessibilityRole="alert" style={{ color: colors.red }}>{error}</Text> : null}
-        {!configured ? <Text style={ui.small}>Sign-in is ready once Supabase is connected. Set the mobile environment values in the setup guide.</Text> : null}
-        <Button title={busy ? 'Sending code…' : 'Continue with email  →'} onPress={submit} disabled={busy} />
-        <Text style={[ui.small, { textAlign: 'center' }]}>We’ll email you a one-time code. No password needed.</Text>
-      </Card>
+  return <Screen><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'center', minHeight: 600 }}>
+    <View style={{ gap: 32 }}>
+      <View>
+        <View style={[{ width: 64, height: 64, borderRadius: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 24 }, shadow(2)]}>
+          <Icon name="checkmark-done" size={32} color={colors.lime} />
+        </View>
+        <Text style={{ color: colors.accent, fontSize: 15, fontWeight: '700', marginBottom: 8 }}>{PRODUCT_NAME}</Text>
+        <Text accessibilityRole="header" style={{ color: colors.ink, fontWeight: '800', fontSize: 36, letterSpacing: -1.2, lineHeight: 42 }}>Stay ahead of{'\n'}every deadline.</Text>
+        <View style={{ gap: 12, marginTop: 22 }}>
+          {perks.map((perk) => <View key={perk.text} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.soft, alignItems: 'center', justifyContent: 'center' }}><Icon name={perk.icon} size={17} color={colors.accent} /></View>
+            <Text style={{ color: colors.ink, fontSize: 15, flex: 1 }}>{perk.text}</Text>
+          </View>)}
+        </View>
+      </View>
+      <View>
+        <Field label="Email" value={email} onChangeText={(v) => { setEmail(v); if (error) setError(''); }} placeholder="you@school.edu" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" returnKeyType="send" onSubmitEditing={submit} />
+        {error ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, marginTop: -4 }}><Icon name="alert-circle" size={16} color={colors.red} /><Text accessibilityRole="alert" style={{ color: colors.red, flex: 1, fontSize: 14 }}>{error}</Text></View> : null}
+        {!configured ? <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 12 }}>Sign-in is ready once Supabase is connected. Set the mobile environment values in the setup guide.</Text> : null}
+        <Button title={busy ? 'Sending code…' : 'Continue'} icon={busy ? undefined : 'arrow-forward'} onPress={submit} disabled={busy} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 16 }}>
+          <Icon name="lock-closed-outline" size={14} color={colors.muted} />
+          <Text style={{ color: colors.muted, fontSize: 13 }}>We’ll email you a one-time code. No password needed.</Text>
+        </View>
+      </View>
     </View>
   </KeyboardAvoidingView></Screen>;
 }

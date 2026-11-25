@@ -3,7 +3,7 @@ import { Platform, Pressable, Text, TextInput, View, useColorScheme } from 'reac
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CATEGORY_LABELS, dueInstant, formatDeadline, type ChecklistStep, type PlannerItem } from '@dueday/shared';
-import { Button, Card, Eyebrow, Heading, Loading, Screen, colors, ui } from '../../components/ui';
+import { BackButton, Button, Card, Eyebrow, Heading, Loading, Screen, colors, ui } from '../../components/ui';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
 import { scheduleLocalReminders } from '../../lib/notifications';
@@ -99,7 +99,7 @@ export default function ItemDetail() {
   }
   if (loading) return <Screen><Loading /></Screen>;
   if (!item) return <Screen><View style={{ gap: 16 }}><Eyebrow>DEADLINE</Eyebrow><Heading>{error || 'This item is unavailable.'}</Heading><Button title="Back to planner" onPress={() => router.back()} /></View></Screen>;
-  return <Screen><View style={{ gap: 16 }}><Pressable accessibilityRole="button" onPress={() => router.back()} style={{ paddingVertical: 4 }}><Text style={ui.action}>‹  Back</Text></Pressable>
+  return <Screen><View style={{ gap: 16 }}><BackButton label="Back" />
     <View style={ui.row}><Eyebrow>{CATEGORY_LABELS[item.category].toUpperCase()}</Eyebrow><Text style={{ color: item.status === 'completed' ? colors.green : item.priority === 'high' ? colors.red : colors.muted, fontWeight: '800', fontSize: 12, textTransform: 'uppercase' }}>{item.status === 'completed' ? 'Completed' : `${item.priority} priority`}</Text></View>
     <Heading subtitle={formatDeadline(item.due_on, item.due_time, item.timezone)}>{item.title}</Heading>
     <Card><Text style={{ color: colors.ink, fontWeight: '800', fontSize: 16 }}>Deadline details</Text><Text style={ui.body}>{item.all_day ? 'All day' : `At ${item.due_time} · ${item.timezone}`}</Text><Text style={ui.small}>Reminders: {item.reminders.length ? item.reminders.map(formatOffset).join(', ') : 'None'}</Text>{item.recurrence_rule ? <Text style={ui.small}>Repeats weekly for 16 weeks</Text> : null}{item.notes ? <Text style={ui.body}>{item.notes}</Text> : <Text style={ui.small}>No notes added.</Text>}</Card>
